@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      background-color: black;
+      color: white;
+      margin: auto;
+    }
+
+    #main {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+
+    .color-square {
+      width: 50px;
+      height: 50px;
+      cursor: pointer;
+      border: 1px solid #333;
+      display: inline-block;
+    }
+
+    #container {
+      display: grid;
+    }
+  </style>
+  <title>Color Guessing Game</title>
+</head>
+
+<body>
+  <div id="main">
+    <div >
+      <h1>Guess the odd color</h1>
+      <div id="score"></div>
+      <div id="timer">00:00</div>
+    </div>
+    <div>
+      <button id="dunno">dunno</button>
+    </div>
+    <br>
+    <div id="container"></div>
+    <br>
+    <div>
+      <button id="downloadJSON">Download JSON</button>
+      <button id="clearData">Clear Data</button>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+
+      function displayScore(dataArray) {
+        // Initialize variables
+        let totalCorrect = 0;
+        let totalWrong = 0;
+        let totalDunno = 0;
+        let totalTime = 0;
+
+        // Loop through the data array
+        dataArray.forEach(item => {
+            // Check if correct is true, false, or null
+            if (item.correct === "correct") {
+                totalCorrect++;
+                totalTime += item.seconds || 0;
+            } else if (item.correct === "wrong") {
+                totalWrong++;
+                totalTime += item.seconds || 0;
+            } else if(item.correct == "dunno") {
+                totalDunno++; 
+            }
+            
+            // Add the time taken to the total time
+            totalTime += item.seconds || 0;
+        });
+
+        // Calculate average time
+        const averageTime = dataArray.length > 0 ? totalTime / dataArray.length : 0;
+
+        // Display the results in the specified div
+        const scoreDiv = document.getElementById('score');
+        scoreDiv.innerHTML = `
+            <p><b>Correct:</b> ${totalCorrect} <=> <b>Wrong: ${totalWrong}</b> <=> <b>Dunno:</b> ${totalDunno}</p>
+            <p> <b>Average Time Taken:</b> ${averageTime.toFixed(2)} seconds </p>
+            <p></p>
+        `;
+      }
+
+
+
+
+      const TIMEOUT = 20
+      let timerInterval;
+      let seconds = 0;
+
+      function startTimer() {
+          resetTimer()
+          if (!timerInterval) {
+              timerInterval = setInterval(updateTimer, 1000);
+          }
+      }
+
+      function updateTimer() {
+          seconds++;
+          if(seconds>TIMEOUT){
+            setupGame()
+            //idk("timed_out")
+          }
+          const formattedTime = formatTime(seconds);
+          document.getElementById("timer").innerText = formattedTime;
+      }
+
+      function formatTime(timeInSeconds) {
+          const minutes = Math.floor(timeInSeconds / 60);
+          const remainingSeconds = timeInSeconds % 60;
+          return pad(minutes) + ":" + pad(remainingSeconds);
+      }
+
+      function pad(value) {
+          return value < 10 ? "0" + value : value;
+      }
+
+      function resetTimer() {
+          clearInterval(timerInterval);
+          timerInterval = null;
+          seconds = 0;
+          document.getElementById("timer").innerText = "00:00";
+      }
+
+      const SCALE = 4
+      const MIN = 3 //according to CIE76 a ΔEab* of approximately 2.3 corresponds to a Just noticable difference
+      const MAX = 128
+      const N = 5
+
+      function addToLocalStorage(data) {
+        const savedData = JSON.parse(localStorage.getItem('gameDataV2')) || [];
+        savedData.push(data);
+        localStorage.setItem('gameDataV2', JSON.stringify(savedData));
+      }
+
+      // Function to download data as CSV
+      function downloadJSON() {
+        const parsedData = JSON.parse(localStorage.getItem('gameDataV2')) || [];
+
+        if (parsedData.length === 0) {
+          alert('No data to download.');
+          return;
+        }
+
+        let jsonContent = JSON.stringify(parsedData);
+
+        let jsonBlob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
+
+        let downloadLink = document.createElement("a");
+        downloadLink.href = window.URL.createObjectURL(jsonBlob);
+        downloadLink.setAttribute("download", "file.json");
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+      }
+
+      // Function to clear data from localStorage
+      function clearLocalStorage() {
+        localStorage.removeItem('gameDataV2');
+        alert('Data cleared.');
+        setupGame()
+      }
+
+      // Function to generate a random color different from another color
+      function getRandomColor() {
+        const r = Math.floor(Math.random() * 256).toString(16).padStart(2, '0');
+        const g = Math.floor(Math.random() * 256).toString(16).padStart(2, '0');
+        const b = Math.floor(Math.random() * 256).toString(16).padStart(2, '0');
+        return "#" + r + g + b;
+      }
+
+      function getRandomGaussianDelta() {
+        let delta;
+        let cont;
+        do {
+          cont = false
+          // Generate Gaussian random value by Box-Muller Transform
+          let u1 = Math.random()
+          let u2 = Math.random()
+          let z0 = Math.sqrt(-5 * Math.log(u1)) * Math.cos(5 * Math.PI * u2);
+
+          // Scale and round the value
+          delta = Math.round(z0 * SCALE); // Adjust the scaling factor as needed
+
+          if (delta>-MIN && delta<MIN){
+            cont=true
+          }
+          // Enforce minimum absolute value and handle 0
+          // if (delta === 0) {
+          //   // Randomly choose min or -min
+          //   delta = Math.random() < 0.5 ? -MIN : MIN;
+          // } else {
+          //   // Ensure at least min or -min
+          //   delta = Math.max(Math.abs(delta), MIN) * Math.sign(delta);
+          // }
+        } while (delta < -MAX || delta > MAX || cont);
+
+        return delta;
+      }
+
+      function getColorDelta(color) {
+        const hex = color.substring(1); // Remove the leading "#"
+        const r = parseInt(hex.substring(0, 2), 16);
+        const g = parseInt(hex.substring(2, 4), 16);
+        const b = parseInt(hex.substring(4, 6), 16);
+
+        const deltaR = getRandomGaussianDelta();
+        const deltaG = getRandomGaussianDelta();
+        const deltaB = getRandomGaussianDelta();
+
+        // Ensure color values stay within valid range (0-255)
+        const newR = Math.max(0, Math.min(255, r + deltaR));
+        const newG = Math.max(0, Math.min(255, g + deltaG));
+        const newB = Math.max(0, Math.min(255, b + deltaB));
+
+        return "#" + newR.toString(16).padStart(2, '0') +
+          newG.toString(16).padStart(2, '0') +
+          newB.toString(16).padStart(2, '0');
+      }
+
+      // convert RGB string to Hex String
+      function rgb2hex(rgb) {
+        if (rgb.search("rgb") == -1) {
+          return rgb;
+        } else {
+          rgb = rgb.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*(\d+))?\)$/);
+          function hex(x) {
+            return ("0" + parseInt(x).toString(16)).slice(-2);
+          }
+          return "#" + hex(rgb[1]) + hex(rgb[2]) + hex(rgb[3]);
+        }
+      }
+
+      let commonColor = getRandomColor();
+      let oddColor = getColorDelta(commonColor)
+
+      // Function to set up the game
+      function setupGame() {
+        const parsedData = JSON.parse(localStorage.getItem('gameDataV2')) || [];
+        displayScore(parsedData)
+        startTimer()
+        const container = document.getElementById('container');
+        container.innerHTML = '';
+
+        // Generate a random color for all squares
+        commonColor = getRandomColor();
+        oddColor = getColorDelta(commonColor)
+
+
+
+        container.style.gridTemplateColumns = `repeat(${N}, 50px)`;
+        container.style.gridTemplateRows = `repeat(${N}, 50px)`;
+
+        // Choose a random position for the odd color square
+        const oddPosition = Math.floor(Math.random() * N * N);
+
+        // Create a 3x3 grid
+        for (let i = 0; i < N * N; i++) {
+          const square = document.createElement('div');
+          square.className = 'color-square';
+
+          // Set the odd color for the selected position
+          if (i === oddPosition) {
+            square.style.backgroundColor = oddColor;
+          } else {
+            square.style.backgroundColor = commonColor;
+          }
+
+          // Attach the click event listener outside the conditional blocks
+          square.addEventListener('click', function () {
+            checkColor(rgb2hex(this.style.backgroundColor), oddColor, commonColor);
+          });
+
+          container.appendChild(square);
+        }
+      }
+
+      // Function to check if the clicked color is correct
+      function checkColor(clickedColor, targetColor, commonColor) {
+        const correct = clickedColor === targetColor ? "correct":"wrong";
+
+        if (correct) {
+          console.log("Correct", commonColor, targetColor);
+        } else {
+          console.log("Wrong", commonColor, targetColor);
+        }
+        // Save the game data to localStorage
+        addToLocalStorage({ correct, commonColor, targetColor, N, MAX, MIN, SCALE,seconds });
+
+        // Set up a new game after each click
+        setupGame();
+      }
+
+      function idk(crt="dunno"){
+        const correct = crt.toString()
+        addToLocalStorage({ correct, commonColor, oddColor, N, MAX, MIN, SCALE,seconds });
+        setupGame()
+      }
+
+
+
+      // Initialize the game
+      setupGame();
+
+      document.getElementById('downloadJSON').addEventListener('click', downloadJSON);
+      document.getElementById('clearData').addEventListener('click', clearLocalStorage);
+      document.getElementById('dunno').addEventListener('click',idk);
+    });
+
+
+  </script>
+</body>
+
+</html>
