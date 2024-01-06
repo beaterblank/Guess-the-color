@@ -27,7 +27,7 @@
     .color-square {
       width: 50px;
       height: 50px;
-      cursor: pointer;
+      border-radius: 50%;
       border: 1px solid #333;
       display: inline-block;
     }
@@ -273,7 +273,7 @@
         // Create a 3x3 grid
         for (let i = 0; i < N * N; i++) {
           const square = document.createElement('div');
-          square.className = 'color-square';
+          square.className = 'color-square nes-pointer';
 
           // Set the odd color for the selected position
           if (i === oddPosition) {
