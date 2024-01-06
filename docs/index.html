@@ -133,7 +133,7 @@
           document.getElementById("timer").innerText = "00:00";
       }
 
-      const SCALE = 4
+      const SCALE = 3
       const MIN = 3 //according to CIE76 a ΔEab* of approximately 2.3 corresponds to a Just noticable difference
       const MAX = 128
       const N = 5
@@ -188,7 +188,7 @@
           // Generate Gaussian random value by Box-Muller Transform
           let u1 = Math.random()
           let u2 = Math.random()
-          let z0 = Math.sqrt(-5 * Math.log(u1)) * Math.cos(5 * Math.PI * u2);
+          let z0 = Math.sqrt(-6 * Math.log(u1)) * Math.cos(6 * Math.PI * u2);
 
           // Scale and round the value
           delta = Math.round(z0 * SCALE); // Adjust the scaling factor as needed
