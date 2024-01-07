@@ -99,7 +99,7 @@
 
 
 
-      const TIMEOUT = 20
+      const TIMEOUT = 300
       let timerInterval;
       let seconds = 0;
 
@@ -111,13 +111,16 @@
       }
 
       function updateTimer() {
+        if(document.visibilityState=="visible"){
           seconds++;
-          //if(seconds>TIMEOUT){
-          //  setupGame()
-            //idk("timed_out")
-         // }
           const formattedTime = formatTime(seconds);
           document.getElementById("timer").innerText = formattedTime;
+        }
+        if(seconds>TIMEOUT){
+          //  setupGame()
+            //idk("timed_out")
+          window.location.reload()
+         }
       }
 
       function formatTime(timeInSeconds) {
