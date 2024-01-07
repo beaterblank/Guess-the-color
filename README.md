@@ -7,9 +7,9 @@ In our game set within a 5 by 5 grid, the distribution features `color 1` appear
 
 The selection process of these colors commences with the random assignment of `color 1`. Subsequently, we apply a specialized approach to determine the placement of `color 2`. This involves sampling a delta value from a customized Gaussian probability distribution using an adjusted Box-Muller transformation, with the formula:
 
-\[ Z = \sqrt{-6 \ln(U_1)} \cdot \cos(6\pi U_2) \]
+![image](https://github.com/beaterblank/Guess-the-color/assets/68276845/85b0d3b8-4bea-4e2d-9ce1-ad94353619dd)
 
-where \( U_1 \) and \( U_2 \) represent uniform random variables. The resulting value undergoes scaling by a factor of 2, providing a balanced level of difficulty. we generate deltaR, detlaG, deltaB and add it to `color 1`
+where `U_1` and `U_2` represent uniform random variables. The resulting value undergoes scaling by a factor of 2, providing a balanced level of difficulty. we generate deltaR, detlaG, deltaB and add it to `color 1`
 
 ![probability distribution of our transform](https://github.com/beaterblank/Guess-the-color/assets/68276845/656d3263-4ae4-45ba-96e4-b6d319200331)
 
